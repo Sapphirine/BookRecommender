@@ -18,11 +18,9 @@ title_output_file = open('books.csv','w')
 mydict = dict()
 user_count = 1
 title_count = 1
-#Create ratings.csv file and build dictionary 
-
 
 print("Preparing 'books.csv'...")
-#Use dictionary created above to create books.csv
+
 for i,l in enumerate(parse(title_input_file)):
 	if i%100000==0:
 		print("Current line:%d"%i)
@@ -35,7 +33,6 @@ for i,l in enumerate(parse(title_input_file)):
 			book_id = title_count
 			mydict[book_id_key] = title_count
 			title_count+=1
-		# if book_id_key in mydict and  isinstance( mydict[book_id_key], int ):
 		title_output_file.write(str(book_id)+"$$"+str(tempdict['title'])+'\n')
 print("'books.csv' is ready")
 
