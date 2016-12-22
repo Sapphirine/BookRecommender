@@ -149,18 +149,6 @@ if __name__ == "__main__":
     
     save_model = bestModel.save(sc,"my_best_model")
 
-    # evaluate the best model on the test set
-    # print ("The best model was trained with rank = %d and lambda = %.1f, " % (bestRank, bestLambda) \
-    #   + "and numIter = %d, and its RMSE on the test set is %f." % (bestNumIter, testRmse))
-
-    # compare the best model with a naive baseline that always returns the mean rating
-    # meanRating = training.union(validation).map(lambda x: x[2]).mean()
-    # baselineRmse = sqrt(test.map(lambda x: (meanRating - x[2]) ** 2).reduce(add) / numTest)
-    # improvement = (baselineRmse - testRmse) / baselineRmse * 100
-    # print ("The best model improves the baseline by %.2f" % (improvement) + "%.")
-
-    # make personalized recommendations
-
     myRatedBookIds = set([x[1] for x in myRatings])
     candidates = sc.parallelize([m for m in Books if m not in myRatedBookIds])
     predictions = bestModel.predictAll(candidates.map(lambda x: (0, x))).collect()
