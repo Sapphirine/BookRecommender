@@ -35,4 +35,5 @@ Book_Recommender/
 
 ##Usage:
 1. Set path of spark home. E.g.`export SPARK_HOME=/path/to/spark/home`
-1. run webserver by `python server.py`
+2. run webserver by `python server.py`
+3. If the trained model is needed, you can run `BooksRecommend.py` in `pyspark` using the command `subprocess.call(['/path/to/BookRecommend.py','/path/to/books.csv and ratings.csv','/path/to/personalRatigns.txt'])`
