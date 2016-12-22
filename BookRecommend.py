@@ -15,17 +15,36 @@ def parseRating(line):
     """
     Parses a rating record in BookLens format userId,BookId,rating,timestamp .
     """
-    fields = line.strip().split(",")
-    return int(fields[3]) % 10, (int(fields[0]), int(fields[1]), float(fields[2]))
+    fields = line.strip().split("$$")
+    try: return int(fields[3]) % 10, (int(fields[0]), int(fields[1]), float(fields[2]))
+    except:
+        return 0,(1,1,2.5)
+
 
 def parseBook(line):
     """
     Parses a Book record in BookLens format BookId,BookTitle .
     """
-    fields = line.strip().split(",")
+    fields = line.strip().split("$$")
     try: return int(fields[0]),fields[1]
     except: 
-        return 0,"Are you a SB?"
+        return 1,""
+
+def loadRatings(ratingsFile):
+    """
+    Load ratings from file.
+    """
+    if not isfile(ratingsFile):
+        print ("File %s does not exist." % ratingsFile)
+        sys.exit(1)
+    f = open(ratingsFile, 'r')
+    ratings = filter(lambda r: r[2] > 0, [parseRating(line)[1] for line in f])
+    f.close()
+    if not ratings:
+        print ("No ratings provided.")
+        sys.exit(1)
+    else:
+        return ratings
 
 
 
@@ -52,13 +71,13 @@ if __name__ == "__main__":
     # set up environment
     conf = SparkConf() \
       .setAppName("BookRecommend") \
-      .set("spark.executor.memory", "4g") \
-      .set("spark.driver.memory","4g")
+      .set("spark.executor.memory", "8g") \
+      .set("spark.driver.memory","8g")
     sc = SparkContext(conf=conf)
 
     # load personal ratings
-    # myRatings = loadRatings(sys.argv[2])
-    # myRatingsRDD = sc.parallelize(myRatings, 1)
+    myRatings = loadRatings(sys.argv[2])
+    myRatingsRDD = sc.parallelize(myRatings, 1)
     
     # load ratings and Book titles
 
@@ -86,6 +105,7 @@ if __name__ == "__main__":
     training = ratings.filter(lambda x: x[0] < 6) \
       .values() \
       .repartition(numPartitions) \
+      .union(myRatingsRDD) \
       .cache()
 
     validation = ratings.filter(lambda x: x[0] >= 6 and x[0] < 8) \
@@ -127,28 +147,28 @@ if __name__ == "__main__":
             bestNumIter = numIter
 
     
-    save_model = bestModel.save(sc,"bestModel")
+    save_model = bestModel.save(sc,"my_best_model")
 
-    # # evaluate the best model on the test set
+    # evaluate the best model on the test set
     # print ("The best model was trained with rank = %d and lambda = %.1f, " % (bestRank, bestLambda) \
     #   + "and numIter = %d, and its RMSE on the test set is %f." % (bestNumIter, testRmse))
 
-    # # compare the best model with a naive baseline that always returns the mean rating
+    # compare the best model with a naive baseline that always returns the mean rating
     # meanRating = training.union(validation).map(lambda x: x[2]).mean()
     # baselineRmse = sqrt(test.map(lambda x: (meanRating - x[2]) ** 2).reduce(add) / numTest)
     # improvement = (baselineRmse - testRmse) / baselineRmse * 100
     # print ("The best model improves the baseline by %.2f" % (improvement) + "%.")
 
-    # # make personalized recommendations
+    # make personalized recommendations
 
-    # myRatedBookIds = set([x[1] for x in myRatings])
-    # candidates = sc.parallelize([m for m in Books if m not in myRatedBookIds])
-    # predictions = bestModel.predictAll(candidates.map(lambda x: (0, x))).collect()
-    # recommendations = sorted(predictions, key=lambda x: x[2], reverse=True)[:5]
+    myRatedBookIds = set([x[1] for x in myRatings])
+    candidates = sc.parallelize([m for m in Books if m not in myRatedBookIds])
+    predictions = bestModel.predictAll(candidates.map(lambda x: (0, x))).collect()
+    recommendations = sorted(predictions, key=lambda x: x[2], reverse=True)[:5]
 
-    # print ("Books recommended for you:")
-    # for i in range(len(recommendations)):
-    #     print (("%2d: %s" % (i + 1, Books[recommendations[i][1]])).encode('ascii', 'ignore'))
+    print ("Books recommended for you:")
+    for i in range(len(recommendations)):
+        print (("%2d: %s" % (i + 1, Books[recommendations[i][1]])).encode('ascii', 'ignore'))
 
     # clean up
     sc.stop()
